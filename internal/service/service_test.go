@@ -130,3 +130,21 @@ func TestActiveRequestsQuery(t *testing.T) {
 		t.Errorf("not sorted by library: %v", views)
 	}
 }
+
+func TestActiveRequestsExcludesReturnedHistory(t *testing.T) {
+	store := storage.New()
+	svc := New(store)
+
+	svc.CreateBook(domain.Book{ID: "b1", Title: "T", Author: "A"})
+	svc.CreateCopy(domain.Copy{ID: "c1", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateReader(domain.Reader{ID: "r1", Name: "N", Email: "r1@example.com"})
+	svc.CreateRequest(domain.BorrowRequest{ID: "req1", CopyID: "c1", ReaderID: "r1", Status: domain.RequestApplied, RequestedAt: time.Now()})
+	svc.LockRequest("req1")
+	svc.ShipRequest("req1")
+	svc.ReceiveRequest("req1", time.Now().Add(7*24*time.Hour))
+	svc.ReturnRequest("req1")
+
+	if views := svc.ActiveRequests(); len(views) != 0 {
+		t.Fatalf("returned history leaked into active requests: %v", views)
+	}
+}
