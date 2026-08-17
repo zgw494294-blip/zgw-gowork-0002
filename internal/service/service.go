@@ -81,12 +81,12 @@ func (s *Service) ReturnRequest(requestID string) error {
 	if !ok {
 		return errors.New("request not found")
 	}
-	s.store.ReleaseCopy(req.CopyID)
 	if req.Status != domain.RequestReceived {
 		return errors.New("request status must be RECEIVED")
 	}
 	req.Status = domain.RequestReturned
 	s.store.UpdateRequest(req)
+	s.store.ReleaseCopy(req.CopyID)
 	return nil
 }
 
