@@ -81,7 +81,7 @@ func (s *Store) CreateRequest(req domain.BorrowRequest) error {
 	// check reader has overdue active request
 	for _, r := range s.Requests {
 		if r.ReaderID == req.ReaderID && r.Status != domain.RequestReturned {
-			if r.DueDate != nil && r.DueDate.Before(r.RequestedAt) {
+			if r.DueDate != nil && r.DueDate.Before(req.RequestedAt) {
 				return errors.New("reader has overdue request")
 			}
 		}
