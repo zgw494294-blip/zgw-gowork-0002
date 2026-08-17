@@ -130,3 +130,28 @@ func TestActiveRequestsQuery(t *testing.T) {
 		t.Errorf("not sorted by library: %v", views)
 	}
 }
+
+func TestActiveRequestsSortsEarlierDueDateFirstWithinLibrary(t *testing.T) {
+	store := storage.New()
+	svc := New(store)
+	base := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
+
+	svc.CreateBook(domain.Book{ID: "b1", Title: "T", Author: "A"})
+	svc.CreateCopy(domain.Copy{ID: "c1", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateCopy(domain.Copy{ID: "c2", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateReader(domain.Reader{ID: "r1", Name: "N1", Email: "r1@example.com"})
+	svc.CreateReader(domain.Reader{ID: "r2", Name: "N2", Email: "r2@example.com"})
+	svc.CreateRequest(domain.BorrowRequest{ID: "later", CopyID: "c1", ReaderID: "r1", Status: domain.RequestApplied, RequestedAt: base})
+	svc.CreateRequest(domain.BorrowRequest{ID: "earlier", CopyID: "c2", ReaderID: "r2", Status: domain.RequestApplied, RequestedAt: base})
+	for _, id := range []string{"later", "earlier"} {
+		svc.LockRequest(id)
+		svc.ShipRequest(id)
+	}
+	svc.ReceiveRequest("later", base.Add(10*24*time.Hour))
+	svc.ReceiveRequest("earlier", base.Add(3*24*time.Hour))
+
+	views := svc.ActiveRequests()
+	if len(views) != 2 || views[0].RequestID != "earlier" || views[1].RequestID != "later" {
+		t.Fatalf("active requests not sorted by ascending due date: %v", views)
+	}
+}
