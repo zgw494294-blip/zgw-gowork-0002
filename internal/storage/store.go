@@ -129,7 +129,7 @@ func (s *Store) ActiveRequestsByLibraryAndDue() []domain.ActiveRequestView {
 	defer s.mu.RUnlock()
 	var views []domain.ActiveRequestView
 	for _, req := range s.Requests {
-		if req.Status != domain.RequestApplied && req.Status != domain.RequestLocked {
+		if req.Status == domain.RequestShipped || req.Status == domain.RequestReceived {
 			copy := s.Copies[req.CopyID]
 			views = append(views, domain.ActiveRequestView{
 				RequestID: req.ID,
