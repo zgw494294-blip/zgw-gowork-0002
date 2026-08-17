@@ -130,3 +130,24 @@ func TestActiveRequestsQuery(t *testing.T) {
 		t.Errorf("not sorted by library: %v", views)
 	}
 }
+
+func TestRejectedEarlyReturnKeepsCopyReserved(t *testing.T) {
+	store := storage.New()
+	svc := New(store)
+
+	svc.CreateBook(domain.Book{ID: "b1", Title: "T", Author: "A"})
+	svc.CreateCopy(domain.Copy{ID: "c1", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateReader(domain.Reader{ID: "r1", Name: "N1", Email: "r1@example.com"})
+	svc.CreateReader(domain.Reader{ID: "r2", Name: "N2", Email: "r2@example.com"})
+	svc.CreateRequest(domain.BorrowRequest{ID: "req1", CopyID: "c1", ReaderID: "r1", Status: domain.RequestApplied, RequestedAt: time.Now()})
+	svc.LockRequest("req1")
+	svc.ShipRequest("req1")
+
+	if err := svc.ReturnRequest("req1"); err == nil {
+		t.Fatal("expected return before receipt to fail")
+	}
+	err := svc.CreateRequest(domain.BorrowRequest{ID: "req2", CopyID: "c1", ReaderID: "r2", Status: domain.RequestApplied, RequestedAt: time.Now()})
+	if err == nil {
+		t.Fatal("rejected return released a copy that is still in transit")
+	}
+}
