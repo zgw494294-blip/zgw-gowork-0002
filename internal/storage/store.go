@@ -63,9 +63,6 @@ func (s *Store) CreateReader(r domain.Reader) error {
 func (s *Store) CreateRequest(req domain.BorrowRequest) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, exists := s.Requests[req.ID]; exists {
-		return errors.New("request already exists")
-	}
 	// check copy exists and is available
 	copy, ok := s.Copies[req.CopyID]
 	if !ok {
@@ -89,6 +86,9 @@ func (s *Store) CreateRequest(req domain.BorrowRequest) error {
 	// lock copy immediately (we'll represent availability via copyReqID)
 	s.Copies[req.CopyID] = domain.Copy{ID: copy.ID, BookID: copy.BookID, Library: copy.Library, Status: domain.CopyBorrowed}
 	s.copyReqID[req.CopyID] = req.ID
+	if _, exists := s.Requests[req.ID]; exists {
+		return errors.New("request already exists")
+	}
 	s.Requests[req.ID] = req
 	return nil
 }
