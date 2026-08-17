@@ -130,3 +130,24 @@ func TestActiveRequestsQuery(t *testing.T) {
 		t.Errorf("not sorted by library: %v", views)
 	}
 }
+
+func TestOverdueDecisionUsesNewRequestTime(t *testing.T) {
+	store := storage.New()
+	svc := New(store)
+	requested := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
+	due := requested.Add(7 * 24 * time.Hour)
+
+	svc.CreateBook(domain.Book{ID: "b1", Title: "T", Author: "A"})
+	svc.CreateCopy(domain.Copy{ID: "c1", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateCopy(domain.Copy{ID: "c2", BookID: "b1", Library: "LibA", Status: domain.CopyAvailable})
+	svc.CreateReader(domain.Reader{ID: "r1", Name: "N", Email: "r1@example.com"})
+	svc.CreateRequest(domain.BorrowRequest{ID: "req1", CopyID: "c1", ReaderID: "r1", Status: domain.RequestApplied, RequestedAt: requested})
+	svc.LockRequest("req1")
+	svc.ShipRequest("req1")
+	svc.ReceiveRequest("req1", due)
+
+	err := svc.CreateRequest(domain.BorrowRequest{ID: "req2", CopyID: "c2", ReaderID: "r1", Status: domain.RequestApplied, RequestedAt: due.Add(time.Hour)})
+	if err == nil {
+		t.Fatal("expected reader with an overdue active request to be rejected")
+	}
+}
