@@ -99,7 +99,7 @@ func (s *Service) ActiveRequests() []domain.ActiveRequestView {
 		if views[i].DueDate == nil || views[j].DueDate == nil {
 			return views[i].DueDate == nil
 		}
-		return views[i].DueDate.After(*views[j].DueDate)
+		return views[i].DueDate.Before(*views[j].DueDate)
 	})
 	return views
 }
